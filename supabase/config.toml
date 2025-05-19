@@ -1,0 +1,2 @@
+[functions."n8n-rfp-results-callback"]
+verify_jwt = false
