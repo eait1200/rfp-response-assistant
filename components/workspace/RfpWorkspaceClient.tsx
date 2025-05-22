@@ -19,8 +19,10 @@ interface RfpWorkspaceClientProps {
   questions: Tables<'rfp_questions'>[];
 }
 
-export default function RfpWorkspaceClient({ project, questions }: RfpWorkspaceClientProps) {
+export default function RfpWorkspaceClient({ project, questions: initialQuestions }: RfpWorkspaceClientProps) {
+  const [questions, setQuestions] = useState(initialQuestions);
   const [activeTab, setActiveTab] = useState('questions');
+  const [openCommentSectionId, setOpenCommentSectionId] = useState<string | null>(null);
 
   // Map project fields
   const client = project.client_name || '--';
@@ -36,6 +38,20 @@ export default function RfpWorkspaceClient({ project, questions }: RfpWorkspaceC
   const draftCount = questions.filter(q => q.status === 'Draft').length;
   const inReviewCount = questions.filter(q => q.status === 'In Review').length;
   const approvedCount = questions.filter(q => q.status === 'Approved').length;
+
+  const handleToggleCommentSection = (questionId: string) => {
+    setOpenCommentSectionId(prevId => (prevId === questionId ? null : questionId));
+  };
+
+  function handleQuestionUpdate(updatedQuestion: Tables<'rfp_questions'>) {
+    setQuestions(prevQuestions => {
+      const updatedQuestions = prevQuestions.map(q =>
+        q.id === updatedQuestion.id ? { ...q, ...updatedQuestion } : q
+      );
+      console.log('[CLIENT SAVE] Questions array AFTER attempting local state update:', updatedQuestions);
+      return updatedQuestions;
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -189,7 +205,6 @@ export default function RfpWorkspaceClient({ project, questions }: RfpWorkspaceC
                   <Progress 
                     value={totalQuestions ? (inReviewCount / totalQuestions) * 100 : 0} 
                     className="h-1.5 bg-secondary"
-                    indicatorClassName="bg-everstream-orange"
                   />
                 </div>
 
@@ -212,7 +227,6 @@ export default function RfpWorkspaceClient({ project, questions }: RfpWorkspaceC
                   <Progress 
                     value={totalQuestions ? (approvedCount / totalQuestions) * 100 : 0} 
                     className="h-1.5 bg-secondary"
-                    indicatorClassName="bg-emerald-500"
                   />
                 </div>
               </div>
@@ -241,14 +255,19 @@ export default function RfpWorkspaceClient({ project, questions }: RfpWorkspaceC
                       className="pl-8"
                     />
                   </div>
-                  <Button variant="outline" size="icon">
-                    <Filter className="h-4 w-4" />
+                  <Button variant="outline" className="shrink-0">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filter
                   </Button>
                 </div>
               </CardContent>
             </Card>
-
-            <RfpQuestionsList questions={questions} />
+            <RfpQuestionsList 
+              questions={questions}
+              onQuestionUpdate={handleQuestionUpdate}
+              openCommentSectionId={openCommentSectionId}
+              onToggleCommentSection={handleToggleCommentSection}
+            />
           </div>
         </TabsContent>
 

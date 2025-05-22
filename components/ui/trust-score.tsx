@@ -6,12 +6,14 @@ interface TrustScoreProps {
   value: number;
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
+  numericClassName?: string;
 }
 
 export default function TrustScore({ 
   value, 
   size = 'md',
-  showLabel = true 
+  showLabel = true,
+  numericClassName
 }: TrustScoreProps) {
   // Determine color based on score
   const getColor = (score: number) => {
@@ -24,7 +26,7 @@ export default function TrustScore({
   const sizeClasses = {
     sm: { circle: 'h-8 w-8', text: 'text-xs' },
     md: { circle: 'h-10 w-10', text: 'text-sm' },
-    lg: { circle: 'h-14 w-14', text: 'text-base' },
+    lg: { circle: 'h-14 w-14', text: 'text-3xl font-extrabold' },
   };
   
   // Circle stroke width
@@ -76,7 +78,7 @@ export default function TrustScore({
         {/* Value text */}
         <div className={cn(
           "absolute font-medium",
-          sizeClasses[size].text,
+          numericClassName || sizeClasses[size].text,
           getColor(value)
         )}>
           {value > 0 ? value : '-'}
