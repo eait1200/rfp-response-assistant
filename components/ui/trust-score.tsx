@@ -7,13 +7,15 @@ interface TrustScoreProps {
   size?: 'sm' | 'md' | 'lg';
   showLabel?: boolean;
   numericClassName?: string;
+  showCircle?: boolean;
 }
 
 export default function TrustScore({ 
   value, 
   size = 'md',
   showLabel = true,
-  numericClassName
+  numericClassName,
+  showCircle = true
 }: TrustScoreProps) {
   // Determine color based on score
   const getColor = (score: number) => {
@@ -43,41 +45,44 @@ export default function TrustScore({
   return (
     <div className="flex items-center justify-center gap-2">
       <div className="relative flex items-center justify-center">
-        <svg
-          className={cn(
-            "transform -rotate-90",
-            sizeClasses[size].circle
-          )}
-          viewBox={`0 0 ${radius * 2 + strokeWidth * 2} ${radius * 2 + strokeWidth * 2}`}
-        >
-          {/* Background circle */}
-          <circle
-            cx={radius + strokeWidth}
-            cy={radius + strokeWidth}
-            r={radius}
-            className="fill-none stroke-muted"
-            strokeWidth={strokeWidth}
-          />
-          
-          {/* Progress circle */}
-          <circle
-            cx={radius + strokeWidth}
-            cy={radius + strokeWidth}
-            r={radius}
+        {showCircle && (
+          <svg
             className={cn(
-              "fill-none transition-all duration-500 ease-out",
-              getColor(value)
+              "transform -rotate-90",
+              sizeClasses[size].circle
             )}
-            strokeWidth={strokeWidth}
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-          />
-        </svg>
+            viewBox={`0 0 ${radius * 2 + strokeWidth * 2} ${radius * 2 + strokeWidth * 2}`}
+          >
+            {/* Background circle */}
+            <circle
+              cx={radius + strokeWidth}
+              cy={radius + strokeWidth}
+              r={radius}
+              className="fill-none stroke-muted"
+              strokeWidth={strokeWidth}
+            />
+            
+            {/* Progress circle */}
+            <circle
+              cx={radius + strokeWidth}
+              cy={radius + strokeWidth}
+              r={radius}
+              className={cn(
+                "fill-none transition-all duration-500 ease-out",
+                getColor(value)
+              )}
+              strokeWidth={strokeWidth}
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
         
         {/* Value text */}
         <div className={cn(
-          "absolute font-medium",
+          showCircle ? "absolute" : "",
+          "font-medium",
           numericClassName || sizeClasses[size].text,
           getColor(value)
         )}>

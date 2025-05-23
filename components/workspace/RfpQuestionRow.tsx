@@ -1,24 +1,31 @@
 'use client';
 
-import type { Tables, TablesInsert } from '@/types/supabase';
+import type { Tables } from '@/types/supabase';
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Info, UserPlus, MessageCircle, Loader2, MoreHorizontal } from 'lucide-react';
+import { MessageCircle, Loader2, MoreHorizontal, Info } from 'lucide-react';
 import TrustScore from '@/components/ui/trust-score';
-import AssigneePopover from '@/components/workspace/RfpRowAssigneePopover';
 import EditResponseArea from '@/components/workspace/RfpRowEditResponseArea';
 import CommentsSection, { RfpComment as CommentSectionRfpCommentType } from '@/components/workspace/RfpRowCommentsSection';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
+import AssigneeManager from './AssigneeManager';
 
 interface RfpQuestionRowProps {
   question: Tables<'rfp_questions'>;
   onQuestionUpdate: (updatedQuestion: Tables<'rfp_questions'>) => void;
   isCommentSectionOpen: boolean;
   onToggleCommentSection: () => void;
+  onUpdateAssignee: (questionId: string, field: 'editor_id' | 'reviewer_id', userId: string | null) => Promise<void>;
 }
 
 export type RfpCommentRowType = CommentSectionRfpCommentType;
@@ -30,9 +37,9 @@ export default function RfpQuestionRow({
   onQuestionUpdate,
   isCommentSectionOpen,
   onToggleCommentSection,
+  onUpdateAssignee,
 }: RfpQuestionRowProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [showAssignees, setShowAssignees] = useState(false);
   const [status, setStatus] = useState(question.status || 'Draft');
   const [loadingStatusChange, setLoadingStatusChange] = useState(false);
   const [loadingSaveResponse, setLoadingSaveResponse] = useState(false);
@@ -45,10 +52,10 @@ export default function RfpQuestionRow({
 
   const getStatusTagClass = (currentStatus: string | null) => {
     switch (currentStatus) {
-      case 'Approved': return 'bg-emerald-500 text-white';
-      case 'In Review': return 'bg-everstream-orange text-white';
-      case 'Draft': return 'bg-blue-500 text-white';
-      default: return 'bg-gray-400 text-white';
+      case 'Approved': return 'bg-emerald-500 text-white hover:bg-emerald-600';
+      case 'In Review': return 'bg-everstream-orange text-white hover:bg-orange-500';
+      case 'Draft': return 'bg-blue-500 text-white hover:bg-blue-600';
+      default: return 'bg-gray-400 text-white hover:bg-gray-500';
     }
   };
 
@@ -58,6 +65,7 @@ export default function RfpQuestionRow({
 
   const fetchComments = useCallback(async () => {
     if (!question.id) return;
+    setCommentsLoading(true);
     try {
       const { data, error } = await supabase
         .from('rfp_comments')
@@ -81,19 +89,8 @@ export default function RfpQuestionRow({
   }, [question.id, toast]);
 
   useEffect(() => {
-    if (commentsLoading) {
+    if (isCommentSectionOpen || commentsLoading) {
         fetchComments();
-    }
-  }, [fetchComments, commentsLoading]);
-
-  useEffect(() => {
-    if (isCommentSectionOpen) {
-      setCommentsLoading(true);
-      fetchComments();
-    } else {
-      if(comments.length > 0 && commentsLoading) {
-        setCommentsLoading(false);
-      }
     }
   }, [isCommentSectionOpen, fetchComments]);
 
@@ -169,16 +166,53 @@ export default function RfpQuestionRow({
   }
   
   return (
-    <Card className="bg-white">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between gap-6">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className={questionFont}>
-                {question.section_header || `${question.original_sheet_name || ''} ${question.original_row_number || ''}`}
-              </span>
-            </div>
-            <div className={questionFont + ' mb-1'}>{question.identified_question_text}</div>
+    <Card className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+      <CardContent className="p-4 md:p-6">
+        <div className="flex items-start justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <div className={`${questionFont} truncate`}>{question.section_header || `${question.original_sheet_name || 'Sheet'} ${question.original_row_number || '-'}`}</div>
+            <Badge className={`${getStatusTagClass(status)} px-2.5 py-1 text-xs font-semibold rounded-full whitespace-nowrap`}>
+              {loadingStatusChange ? <Loader2 className="h-3 w-3 animate-spin" /> : (status || 'Unknown')}
+            </Badge>
+          </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gray-700" disabled={loadingStatusChange || loadingSaveResponse}>
+                {loadingStatusChange ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-5 w-5" />}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuSeparator />
+              {ALL_STATUSES.map(s => (
+                <DropdownMenuItem 
+                  key={s} 
+                  onClick={() => handleStatusChange(s)}
+                  disabled={s === status || loadingStatusChange}
+                  className="text-sm"
+                >
+                  Mark as {s}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onToggleCommentSection} disabled={isEditing} className="text-sm">
+                  View/Add Comments
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleEditClick} disabled={isEditing || isCommentSectionOpen} className="text-sm">
+                  Edit Response
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-sm text-red-600 focus:text-red-600 focus:bg-red-50">
+                Delete Question
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className={`${questionFont} mb-2 leading-tight`}>{question.identified_question_text}</div>
+        
+        <div className="flex gap-4 items-start mb-3">
+          <div className="flex-1">
             {isEditing ? (
               <EditResponseArea
                 value={editableResponseText ?? ''}
@@ -188,85 +222,98 @@ export default function RfpQuestionRow({
                 loading={loadingSaveResponse}
               />
             ) : (
-              <div className={responseFont + ' text-muted-foreground whitespace-pre-line'}>{responseToDisplay}</div>
+              <div className={`${responseFont} text-gray-700 whitespace-pre-line`}>{responseToDisplay}</div>
             )}
-            {isCommentSectionOpen && (
-              <CommentsSection
-                questionId={question.id}
-                comments={comments}
-                setComments={setComments as React.Dispatch<React.SetStateAction<CommentSectionRfpCommentType[]>>}
-                onClose={onToggleCommentSection}
-              />
-            )}
-            <div className="mt-2 text-xs text-muted-foreground">
-              <div>AI Sources: {question.sources_text || '--'}</div>
-              <div>Editor: {question.editor_info || '--'} | Reviewer: {question.reviewer_info || '--'}</div>
-            </div>
-            <div className="flex items-center gap-2 mt-3">
-              <Button size="sm" variant="outline" onClick={handleEditClick} disabled={loadingStatusChange || loadingSaveResponse || isCommentSectionOpen}>
-                Edit
-              </Button>
-              <Button size="sm" variant="outline" onClick={onToggleCommentSection} disabled={loadingStatusChange || loadingSaveResponse || isEditing}>
-                <MessageCircle className="h-4 w-4 mr-1" />
-                Comment
-                {commentsLoading ? (
-                  <Loader2 className="ml-1 h-3 w-3 animate-spin" />
-                ) : comments.length > 0 && (
-                  <span className="ml-1 bg-gray-200 text-gray-700 rounded-full px-2 py-0.5 text-xs font-semibold">
-                    {comments.length}
-                  </span>
-                )}
-              </Button>
-            </div>
           </div>
-          <div className="flex items-center gap-4 min-w-[320px] justify-end">
-            <Badge className={`${getStatusTagClass(status)} px-2 py-0.5 text-xs font-medium rounded-full`}>
-              {loadingStatusChange ? <Loader2 className="h-3 w-3 animate-spin" /> : (status || 'Unknown')}
-            </Badge>
-            <div className="flex items-center -space-x-2 relative">
-              <AssigneePopover
-                assigneeIds={question.assignee_ids}
-                show={showAssignees}
-                onOpen={() => setShowAssignees(true)}
-                onClose={() => setShowAssignees(false)}
-              />
-              <Button
-                size="icon"
-                variant="ghost"
-                className="ml-2"
-                onClick={() => setShowAssignees((v) => !v)}
-                aria-label="Assign users"
-                disabled={loadingStatusChange || loadingSaveResponse}
-              >
-                <UserPlus className="h-5 w-5 text-everstream-blue" />
-              </Button>
-            </div>
-            <div className="flex flex-col items-center">
-              <TrustScore value={score} size="lg" showLabel={true} />
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" disabled={loadingStatusChange || loadingSaveResponse}>
-                  {loadingStatusChange ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-5 w-5" />}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled>Current: {status}</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {ALL_STATUSES.filter(s => s !== status).map(newStatus => (
-                  <DropdownMenuItem
-                    key={newStatus}
-                    onClick={() => handleStatusChange(newStatus)}
-                    disabled={loadingStatusChange}
-                  >
-                    {loadingStatusChange && status === newStatus ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} 
-                    Change to: {newStatus}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          
+          <div className="flex-shrink-0 mt-1">
+            <TrustScore value={score} size="md" showLabel={true} numericClassName="text-xl" />
           </div>
         </div>
+        
+        <div className="text-xs text-gray-500 mb-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1 cursor-pointer hover:text-gray-700 transition-colors">
+                  <Info className="h-3 w-3" />
+                  <span className="underline decoration-dotted">AI Sources & Justification</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-md p-3" side="bottom" align="start">
+                <div className="space-y-2">
+                  <div>
+                    <h4 className="font-semibold text-sm mb-1">AI Sources:</h4>
+                    <p className="text-xs text-gray-600">{question.sources_text || 'No sources provided'}</p>
+                  </div>
+                  {question.justification && (
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Justification:</h4>
+                      <p className="text-xs text-gray-600">{question.justification}</p>
+                    </div>
+                  )}
+                  {!question.justification && (
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Justification:</h4>
+                      <p className="text-xs text-gray-400 italic">No justification provided</p>
+                    </div>
+                  )}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 mt-4 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap pl-0">
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-900"
+              onClick={handleEditClick} 
+              disabled={loadingStatusChange || loadingSaveResponse || isCommentSectionOpen}
+            >
+              Edit Response
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-900"
+              onClick={onToggleCommentSection} 
+              disabled={loadingStatusChange || loadingSaveResponse || isEditing}
+            >
+              <MessageCircle className="h-4 w-4 mr-1.5" />
+              Comments
+              {commentsLoading ? (
+                <Loader2 className="ml-1.5 h-3 w-3 animate-spin" />
+              ) : comments.length > 0 && (
+                <span className="ml-1.5 bg-gray-200 text-gray-600 rounded-full px-1.5 py-0.5 text-xs font-medium">
+                  {comments.length}
+                </span>
+              )}
+            </Button>
+          </div>
+          
+          <div className="pr-0">
+            <AssigneeManager 
+              questionId={question.id}
+              currentEditorId={question.editor_id || null}
+              currentReviewerId={question.reviewer_id || null}
+              onUpdateAssignee={onUpdateAssignee}
+            />
+          </div>
+        </div>
+
+        {isCommentSectionOpen && (
+          <div className="mt-4 border-t pt-4">
+            <CommentsSection
+              questionId={question.id}
+              comments={comments}
+              setComments={setComments as React.Dispatch<React.SetStateAction<CommentSectionRfpCommentType[]>>}
+              onClose={onToggleCommentSection}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   );

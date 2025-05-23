@@ -1,11 +1,11 @@
 'use client';
 import AppShell from '@/components/layout/AppShell';
-import { Construction } from 'lucide-react'; // Using an appropriate icon
+import { ArchiveX } from 'lucide-react'; // Using an appropriate icon for archive
 import { useSupabaseUser } from '@/lib/useSupabaseUser';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-export default function DashboardPage() {
+export default function ArchivePage() {
   const { user, loading } = useSupabaseUser();
   const router = useRouter();
 
@@ -30,18 +30,17 @@ export default function DashboardPage() {
       </div>
     );
   }
-
   return (
-    <AppShell activeRoute="dashboard (coming soon)"> 
+    <AppShell activeRoute="archive">
       <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-gradient-to-br from-everstream-blue/5 to-everstream-orange/5">
-        <Construction className="w-24 h-24 text-everstream-orange mb-8" />
+        <ArchiveX className="w-24 h-24 text-everstream-blue mb-8" />
         <h1 className="text-4xl font-bold text-everstream-blue mb-4 font-raleway">
-          Dashboard Coming Soon!
+          Archive Coming Soon!
         </h1>
         <p className="text-lg text-gray-700 max-w-md">
-          We&apos;re working hard to bring you an insightful dashboard experience. Please check back later.
+          We&apos;re currently developing the archive functionality. Your past projects will be accessible here soon.
         </p>
       </div>
     </AppShell>
   );
-}
+} 

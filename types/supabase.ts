@@ -9,10 +9,73 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          created_at: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      rfp_comments: {
+        Row: {
+          comment_text: string
+          created_at: string | null
+          id: string
+          question_id: string
+          user_avatar_initials: string | null
+          user_display_name: string
+          user_id: string | null
+        }
+        Insert: {
+          comment_text: string
+          created_at?: string | null
+          id?: string
+          question_id: string
+          user_avatar_initials?: string | null
+          user_display_name: string
+          user_id?: string | null
+        }
+        Update: {
+          comment_text?: string
+          created_at?: string | null
+          id?: string
+          question_id?: string
+          user_avatar_initials?: string | null
+          user_display_name?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfp_comments_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "rfp_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rfp_projects: {
         Row: {
           client_name: string | null
           completed_at: string | null
+          customer_name: string | null
           description: string | null
           display_rfp_id: string | null
           due_date: string | null
@@ -29,6 +92,7 @@ export type Database = {
         Insert: {
           client_name?: string | null
           completed_at?: string | null
+          customer_name?: string | null
           description?: string | null
           display_rfp_id?: string | null
           due_date?: string | null
@@ -45,6 +109,7 @@ export type Database = {
         Update: {
           client_name?: string | null
           completed_at?: string | null
+          customer_name?: string | null
           description?: string | null
           display_rfp_id?: string | null
           due_date?: string | null
@@ -67,19 +132,22 @@ export type Database = {
           confidence_score_calculated: number | null
           confidence_text: string | null
           edited_answer: string | null
-          editor_info: string | null
+          editor_id: string | null
           id: string
           identified_question_text: string
+          justification: string | null
           last_edited_at: string | null
           last_edited_by: string | null
+          last_status_change_at: string | null
           original_row_number: number | null
           original_sheet_name: string | null
           project_id: string
           review_required_text: string | null
-          reviewer_info: string | null
+          reviewer_id: string | null
           section_header: string | null
           sources_text: string | null
           status: string | null
+          trust_score: number | null
         }
         Insert: {
           ai_generated_answer?: string | null
@@ -87,19 +155,22 @@ export type Database = {
           confidence_score_calculated?: number | null
           confidence_text?: string | null
           edited_answer?: string | null
-          editor_info?: string | null
+          editor_id?: string | null
           id?: string
           identified_question_text: string
+          justification?: string | null
           last_edited_at?: string | null
           last_edited_by?: string | null
+          last_status_change_at?: string | null
           original_row_number?: number | null
           original_sheet_name?: string | null
           project_id: string
           review_required_text?: string | null
-          reviewer_info?: string | null
+          reviewer_id?: string | null
           section_header?: string | null
           sources_text?: string | null
           status?: string | null
+          trust_score?: number | null
         }
         Update: {
           ai_generated_answer?: string | null
@@ -107,19 +178,22 @@ export type Database = {
           confidence_score_calculated?: number | null
           confidence_text?: string | null
           edited_answer?: string | null
-          editor_info?: string | null
+          editor_id?: string | null
           id?: string
           identified_question_text?: string
+          justification?: string | null
           last_edited_at?: string | null
           last_edited_by?: string | null
+          last_status_change_at?: string | null
           original_row_number?: number | null
           original_sheet_name?: string | null
           project_id?: string
           review_required_text?: string | null
-          reviewer_info?: string | null
+          reviewer_id?: string | null
           section_header?: string | null
           sources_text?: string | null
           status?: string | null
+          trust_score?: number | null
         }
         Relationships: [
           {
@@ -131,12 +205,131 @@ export type Database = {
           },
         ]
       }
+      user_profiles: {
+        Row: {
+          first_name: string | null
+          id: string
+          last_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      admin_update_user_role: {
+        Args: { user_id_param: string; new_role_param: string }
+        Returns: Json
+      }
+      create_update_user_role_function_if_not_exists: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      get_all_user_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          first_name: string
+          last_name: string
+        }[]
+      }
+      get_my_app_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_user_profile: {
+        Args: { user_id_param: string }
+        Returns: {
+          id: string
+          first_name: string
+          last_name: string
+          email: string
+          app_role: string
+          updated_at: string
+        }[]
+      }
+      get_users_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          app_role: string
+          created_at: string
+        }[]
+      }
+      insert_rfp_project: {
+        Args: {
+          p_original_filename: string
+          p_status?: string
+          p_n8n_job_id?: string
+        }
+        Returns: Json
+      }
+      insert_rfp_question: {
+        Args:
+          | {
+              p_project_id: string
+              p_identified_question_text: string
+              p_original_sheet_name?: string
+              p_original_row_number?: number
+              p_section_header?: string
+              p_ai_generated_answer?: string
+              p_confidence_text?: string
+              p_confidence_score_calculated?: number
+              p_review_required_text?: string
+              p_sources_text?: string
+              p_justification?: string
+              p_status?: string
+            }
+          | {
+              p_project_id: string
+              p_identified_question_text: string
+              p_original_sheet_name?: string
+              p_original_row_number?: number
+              p_section_header?: string
+              p_ai_generated_answer?: string
+              p_confidence_text?: string
+              p_confidence_score_calculated?: number
+              p_review_required_text?: string
+              p_sources_text?: string
+              p_status?: string
+            }
+        Returns: undefined
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      update_user_profile: {
+        Args: {
+          user_id_param: string
+          first_name_param: string
+          last_name_param: string
+        }
+        Returns: {
+          id: string
+          first_name: string
+          last_name: string
+          email: string
+          app_role: string
+          updated_at: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

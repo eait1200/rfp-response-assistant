@@ -13,6 +13,7 @@ interface RfpQuestionsListProps {
   onQuestionUpdate: (updatedQuestion: Tables<'rfp_questions'>) => void;
   openCommentSectionId: string | null;
   onToggleCommentSection: (questionId: string) => void;
+  onUpdateAssignee: (questionId: string, field: 'editor_id' | 'reviewer_id', userId: string | null) => Promise<void>;
 }
 
 export default function RfpQuestionsList({
@@ -20,13 +21,14 @@ export default function RfpQuestionsList({
   onQuestionUpdate,
   openCommentSectionId,
   onToggleCommentSection,
+  onUpdateAssignee,
 }: RfpQuestionsListProps) {
   if (!questions || questions.length === 0) {
     return <div className="p-8 text-muted-foreground">No questions found for this RFP.</div>;
   }
 
   return (
-          <div className="space-y-4">
+    <div className="space-y-4">
       {questions.map((q) => (
         <RfpQuestionRow 
           key={q.id} 
@@ -34,8 +36,9 @@ export default function RfpQuestionsList({
           onQuestionUpdate={onQuestionUpdate} 
           isCommentSectionOpen={q.id === openCommentSectionId}
           onToggleCommentSection={() => onToggleCommentSection(q.id)}
+          onUpdateAssignee={onUpdateAssignee}
         />
-                          ))}
-                        </div>
+      ))}
+    </div>
   );
 }

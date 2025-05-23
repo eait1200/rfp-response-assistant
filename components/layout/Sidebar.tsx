@@ -11,11 +11,14 @@ import {
   BarChart, 
   ChevronLeft, 
   ChevronRight,
-  FileUp
+  FileUp,
+  Shield,
+  List
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSupabaseUser } from '@/lib/useSupabaseUser';
 
 interface SidebarProps {
   activeRoute?: string;
@@ -24,13 +27,19 @@ interface SidebarProps {
 export default function Sidebar({ activeRoute }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const { user, loading: userLoading } = useSupabaseUser();
 
   const navigation = [
-    { icon: <Home className="h-5 w-5" />, label: 'Dashboard', href: '/dashboard' },
-    { icon: <FileText className="h-5 w-5" />, label: 'My RFPs', href: '/dashboard' },
-    { icon: <BarChart className="h-5 w-5" />, label: 'Analytics', href: '/analytics' },
+    { icon: <Home className="h-5 w-5" />, label: 'Dashboard (coming soon)', href: '/dashboard' },
+    { icon: <List className="h-5 w-5" />, label: 'All RFPs', href: '/rfps/all' },
     { icon: <Archive className="h-5 w-5" />, label: 'Archive', href: '/archive' }
   ];
+
+  const adminNavigation = user && user.app_metadata.app_role === 'admin' ? [
+    { icon: <Shield className="h-5 w-5" />, label: 'Admin Console', href: '/admin/users' }
+  ] : [];
+
+  const allNavigation = [...navigation, ...adminNavigation];
 
   return (
     <aside 
@@ -86,11 +95,12 @@ export default function Sidebar({ activeRoute }: SidebarProps) {
 
       <nav className="flex-1 overflow-y-auto p-2">
         <ul className="space-y-1">
-          {navigation.map((item) => {
+          {allNavigation.map((item) => {
             const isActive = 
               (item.href === pathname) || 
               (activeRoute === item.label.toLowerCase()) ||
-              (item.label === 'Dashboard' && pathname === '/dashboard');
+              (item.label === 'Dashboard (coming soon)' && pathname === '/dashboard') ||
+              (item.label === 'All RFPs' && pathname.startsWith('/rfps'));
             
             return (
               <li key={item.href}>
@@ -114,7 +124,8 @@ export default function Sidebar({ activeRoute }: SidebarProps) {
       </nav>
       
       <div className="p-3 mt-auto border-t border-border">
-        <Button 
+        {/* Original Settings button in sidebar body is removed as it's now in header */}
+        {/* <Button 
           variant="ghost" 
           className={cn(
             "w-full justify-start font-medium gap-2 text-everstream-gray hover:text-everstream-blue",
@@ -123,7 +134,7 @@ export default function Sidebar({ activeRoute }: SidebarProps) {
         >
           <Settings className="h-5 w-5" />
           {!collapsed && <span>Settings</span>}
-        </Button>
+        </Button> */}
       </div>
     </aside>
   );
